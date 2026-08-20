@@ -1,0 +1,39 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "effigy-video-compressor",
+  "version": "2.0.0",
+  "identifier": "com.mikaeru.effigy",
+  "build": {
+    "beforeDevCommand": "pnpm.cmd dev",
+    "beforeBuildCommand": "pnpm.cmd build",
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "Effigy — Video Compressor",
+        "decorations": false,
+        "width": 1100,
+        "height": 780,
+        "minWidth": 900,
+        "minHeight": 660,
+        "resizable": true,
+        "center": true,
+        "dragDropEnabled": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": false,
+    "targets": "nsis",
+    "icon": [
+      "icons/icon.ico",
+      "icons/icon.png"
+    ]
+  }
+}

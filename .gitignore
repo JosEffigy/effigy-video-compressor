@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.pnpm-store/
+build/
+release/
+target/
+src-tauri/target/
+src-tauri/gen/schemas/
+effigy.cfg
+effigy-video-compressor.cfg
+*.cutree
+*-0.log
+*-0.log.mbtree
+*.tmp
+.DS_Store
+Thumbs.db

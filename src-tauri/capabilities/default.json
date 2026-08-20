@@ -1,0 +1,15 @@
+{
+  "$schema": "https://schemas.tauri.app/security/2",
+  "identifier": "default",
+  "description": "Default capabilities for Video Compressor",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:allow-open",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-close",
+    "core:window:allow-is-maximized",
+    "core:window:allow-start-dragging"
+  ]
+}
