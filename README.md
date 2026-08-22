@@ -96,10 +96,18 @@ cargo clippy --all-targets -- -D warnings
 ## Release build
 
 ```powershell
-pnpm tauri build
+pnpm release
 ```
 
-Cargo writes compilation artifacts to `build/cargo-target`. The clean, manually zippable application files live in `release`.
+This rebuilds the app, writes Cargo artifacts only to `build/cargo-target`, then recreates the distributable layout below. The release folder never receives dependency trees, Cargo output, source icons, or other build artifacts.
+
+```text
+release/
+├─ effigy-video-compressor/
+│  ├─ effigy-video-compressor.exe
+│  └─ finish.wav                 (when present in the project root)
+└─ effigy-compressor.zip         (contains the folder above)
+```
 
 ## FFmpeg lookup order
 
