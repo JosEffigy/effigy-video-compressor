@@ -33,9 +33,9 @@ const state = {
 };
 
 const prefs = {
-  uiTheme:'studio', accent:'cyan', customAccent:'#22D3EE',
+  uiTheme:'studio', accent:'rose', customAccent:'#22D3EE',
   mode:'dark', openFolder:false, rememberSettings:true,
-  startOnAdd:false, minimizeToTray:false, outputFolder:'',
+  startOnAdd:false, minimizeToTray:false, outputFolder:'', persistOutputFolder:false,
 };
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
@@ -45,6 +45,9 @@ const compressBtn   = $('compress-btn');
 const summary       = $('summary');
 const ffmpegDot     = $('ffmpeg-dot');
 const ffmpegLabel   = $('ffmpeg-label');
+const ffmpegStatusBtn = $('ffmpeg-status-btn');
+const ffmpegMenu      = $('ffmpeg-menu');
+const ffmpegAlert     = $('ffmpeg-alert');
 const logOutput     = $('log-output');
 const settingsPanel = $('settings-panel');
 const backdrop      = $('settings-backdrop');
@@ -56,8 +59,8 @@ const DROP_SUB_DEFAULT = dropSub.textContent;
 // ── Theme / mode ──────────────────────────────────────────────────────────────
 function applyTheme(name) {
   const isCustom = name === 'custom';
-  const color = isCustom ? prefs.customAccent : (Theme.ACCENTS[name] || Theme.ACCENTS.cyan);
-  prefs.accent = isCustom ? 'custom' : (Theme.ACCENTS[name] ? name : 'cyan');
+  const color = isCustom ? prefs.customAccent : (Theme.ACCENTS[name] || Theme.ACCENTS.rose);
+  prefs.accent = isCustom ? 'custom' : (Theme.ACCENTS[name] ? name : 'rose');
   prefs.customAccent = isCustom ? Theme.applyAccent(color) : prefs.customAccent;
   Theme.applyAccent(color);
   document.querySelectorAll('.swatch').forEach(sw => sw.classList.toggle('active', sw.dataset.theme === name));
@@ -90,7 +93,7 @@ let settingsSaveTimer = 0;
 
 function serializedSettings() {
   return {
-    version: 6,
+    version: 7,
     codec:state.codec, codec_name:state.codec_name, crf:state.crf,
     container:state.container, algorithm:state.algorithm,
     res_mode:state.res_mode, res_w:state.res_w, res_h:state.res_h,
@@ -101,6 +104,8 @@ function serializedSettings() {
     uiTheme:prefs.uiTheme, accent:prefs.accent, customAccent:prefs.customAccent, mode:prefs.mode,
     openFolder:prefs.openFolder, rememberSettings:prefs.rememberSettings,
     startOnAdd:prefs.startOnAdd, minimizeToTray:prefs.minimizeToTray,
+    persistOutputFolder:prefs.persistOutputFolder,
+    outputFolder:prefs.persistOutputFolder ? prefs.outputFolder : null,
   };
 }
 
@@ -134,6 +139,8 @@ function mergePrefs(s) {
   if (s.openFolder != null) prefs.openFolder = s.openFolder;
   if (s.startOnAdd != null) prefs.startOnAdd = s.startOnAdd;
   if (s.minimizeToTray != null) prefs.minimizeToTray = s.minimizeToTray;
+  prefs.persistOutputFolder = s.persistOutputFolder === true;
+  prefs.outputFolder = prefs.persistOutputFolder && typeof s.outputFolder === 'string' ? s.outputFolder : '';
 }
 
 async function loadPrefs() {
@@ -157,6 +164,7 @@ function applyLoadedPrefs() {
   setToggle('toggle-start-on-add', prefs.startOnAdd);
   setToggle('toggle-minimize-tray', prefs.minimizeToTray);
   invoke('set_minimize_to_tray', { enabled:prefs.minimizeToTray });
+  $('persist-output-folder').checked = prefs.persistOutputFolder;
   syncOutputFolderUi();
   activateGroup('codec',  state.codec_name);
   activateGroup('container', state.container);
@@ -547,7 +555,12 @@ $('output-folder-btn').addEventListener('click', async () => {
   if (selected) {
     prefs.outputFolder = selected;
     syncOutputFolderUi();
+    savePrefs();
   }
+});
+$('persist-output-folder').addEventListener('change', event => {
+  prefs.persistOutputFolder = event.currentTarget.checked;
+  savePrefs();
 });
 $('open-output-folder-btn').addEventListener('click', () => {
   const path = prefs.outputFolder || state.files[0]?.path;
@@ -678,10 +691,60 @@ async function refreshHardwareEncoders() {
   catch { $('encoder-detect-status').textContent = 'Additional encoder detection unavailable'; }
 }
 
+function renderFfmpegHealth(r) {
+  const ok = !!(r.ffmpeg_ok && r.ffprobe_ok);
+  const essentials = r.build_variant === 'essentials';
+  const needsUpdate = !!r.update_available;
+  const missingSvt = ok && !r.svt_version;
+  const hasWarning = !ok || essentials || missingSvt || needsUpdate;
+  ffmpegAlert.hidden = !hasWarning;
+  $('ffmpeg-menu-path').textContent = r.path || 'No executable detected';
+  $('update-ffmpeg-btn').textContent = ok && !hasWarning ? 'Reinstall Full build' : (ok ? 'Update FFmpeg' : 'Install FFmpeg Full');
+  if (!ok) {
+    $('ffmpeg-menu-title').textContent = 'FFmpeg is missing';
+    $('ffmpeg-menu-detail').textContent = 'Install the current Full build to enable every supported encoder.';
+  } else if (essentials) {
+    $('ffmpeg-menu-title').textContent = 'Essentials build detected';
+    $('ffmpeg-menu-detail').textContent = 'SVT-AV1 is not included. Update to the Full build for all Effigy encoders.';
+  } else if (missingSvt) {
+    $('ffmpeg-menu-title').textContent = 'SVT-AV1 is unavailable';
+    $('ffmpeg-menu-detail').textContent = 'Install the Full build to enable the SVT-AV1 encoder.';
+  } else if (needsUpdate) {
+    $('ffmpeg-menu-title').textContent = 'FFmpeg update available';
+    const svtNote = r.svt_version ? ` Embedded SVT-AV1: v${r.svt_version}.` : '';
+    const latestNote = r.latest_version ? ` Latest FFmpeg: ${r.latest_version}.` : '';
+    $('ffmpeg-menu-detail').textContent = `This build is outdated.${svtNote}${latestNote}`;
+  } else {
+    $('ffmpeg-menu-title').textContent = r.full_build ? 'FFmpeg Full is current' : 'Custom FFmpeg build';
+    $('ffmpeg-menu-detail').textContent = r.full_build ? 'The active Full build is up to date.' : 'This is not identified as a Gyan Full or Essentials build.';
+  }
+}
+
+ffmpegStatusBtn.addEventListener('click', event => {
+  event.stopPropagation();
+  ffmpegMenu.hidden = !ffmpegMenu.hidden;
+  ffmpegStatusBtn.setAttribute('aria-expanded', String(!ffmpegMenu.hidden));
+});
+ffmpegMenu.addEventListener('click', event => event.stopPropagation());
+document.addEventListener('click', () => {
+  ffmpegMenu.hidden = true;
+  ffmpegStatusBtn.setAttribute('aria-expanded', 'false');
+});
+$('update-ffmpeg-btn').addEventListener('click', () => {
+  ffmpegMenu.hidden = true;
+  ffmpegStatusBtn.setAttribute('aria-expanded', 'false');
+  $('ffmpeg-warning-title').textContent = 'Update FFmpeg';
+  $('ffmpeg-warning-body').textContent = 'Effigy will install the checksum-verified current Full build in its managed FFmpeg folder. Unrelated FFmpeg installations are not overwritten.';
+  $('install-ffmpeg-btn').textContent = 'Update FFmpeg';
+  $('install-idle').style.display = ffmpegInstallRunning ? 'none' : 'block';
+  $('install-progress').style.display = ffmpegInstallRunning ? 'block' : 'none';
+  ffmpegWarning.classList.add('visible');
+});
 // ── FFmpeg check & install ────────────────────────────────────────────────────
 (async () => {
   const r = await invoke('check_ffmpeg');
   const ok = r.ffmpeg_ok && r.ffprobe_ok;
+  renderFfmpegHealth(r);
   ffmpegDot.className = 'status-dot ' + (ok ? 'ok' : 'err');
   if (ok) {
     const ver = r.ffmpeg_version.replace('ffmpeg version ','').split(' ')[0];
@@ -694,32 +757,67 @@ async function refreshHardwareEncoders() {
 })();
 
 $('skip-install-btn').addEventListener('click', () => ffmpegWarning.classList.remove('visible'));
-$('install-ffmpeg-btn').addEventListener('click', async () => {
+$('close-install-btn').addEventListener('click', () => ffmpegWarning.classList.remove('visible'));
+
+let ffmpegInstallRunning = false;
+function showInstallFailure(message) {
+  const statusEl = $('install-status');
+  statusEl.textContent = `Update failed: ${message}`;
+  statusEl.style.color = 'var(--error)';
+  $('retry-install-btn').hidden = false;
+  $('install-bar-fill').classList.add('failed');
+}
+
+async function runFfmpegInstall() {
+  if (ffmpegInstallRunning) return;
+  ffmpegInstallRunning = true;
   $('install-idle').style.display = 'none';
   $('install-progress').style.display = 'block';
-  const statusEl=$('install-status'), barFill=$('install-bar-fill');
+  $('retry-install-btn').hidden = true;
+  const statusEl = $('install-status');
+  const barFill = $('install-bar-fill');
+  statusEl.textContent = 'Preparing...';
+  statusEl.style.color = '';
+  barFill.className = 'install-bar-fill';
+  let completed = false;
 
-  const unlisten = await listen('ffmpeg-install', e => {
-    const { step, done, error } = e.payload;
-    if (error) { statusEl.textContent=`Error: ${error}`; statusEl.style.color='var(--error)'; }
-    else if (done) {
-      statusEl.textContent='✓ Installed!'; barFill.classList.add('done');
-      setTimeout(async () => {
-        const r2 = await invoke('check_ffmpeg');
-        if (r2.ffmpeg_ok && r2.ffprobe_ok) {
-          ffmpegDot.className='status-dot ok';
-          const ver=r2.ffmpeg_version.replace('ffmpeg version ','').split(' ')[0];
-          ffmpegLabel.textContent=`ffmpeg ${ver} (local)`;
-          ffmpegWarning.classList.remove('visible');
-          await refreshHardwareEncoders();
-        }
-      }, 1200);
-    } else { statusEl.textContent = step; }
+  const unlisten = await listen('ffmpeg-install', async event => {
+    const { step, done, error } = event.payload;
+    if (error) {
+      showInstallFailure(error);
+    } else if (done) {
+      completed = true;
+      statusEl.textContent = 'Installed. Verifying...';
+      barFill.classList.add('done');
+      const refreshed = await invoke('check_ffmpeg');
+      renderFfmpegHealth(refreshed);
+      if (refreshed.ffmpeg_ok && refreshed.ffprobe_ok) {
+        ffmpegDot.className = 'status-dot ok';
+        const ver = refreshed.ffmpeg_version.replace('ffmpeg version ','').split(' ')[0];
+        ffmpegLabel.textContent = `ffmpeg ${ver} (local)`;
+        ffmpegWarning.classList.remove('visible');
+        await refreshHardwareEncoders();
+      }
+    } else {
+      statusEl.textContent = step;
+    }
   });
-  try { await invoke('install_ffmpeg'); } catch(err) { statusEl.textContent=`Failed: ${err}`; statusEl.style.color='var(--error)'; }
-  unlisten();
-});
 
+  try {
+    await invoke('install_ffmpeg');
+  } catch (error) {
+    showInstallFailure(error);
+  } finally {
+    ffmpegInstallRunning = false;
+    unlisten();
+    if (!completed && !$('install-status').textContent.startsWith('Update failed:')) {
+      showInstallFailure('The installer stopped before completing.');
+    }
+  }
+}
+
+$('install-ffmpeg-btn').addEventListener('click', runFfmpegInstall);
+$('retry-install-btn').addEventListener('click', runFfmpegInstall);
 // ── Init ──────────────────────────────────────────────────────────────────────
 (async function initializeApp() {
   await loadPrefs();

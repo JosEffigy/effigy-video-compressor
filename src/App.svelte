@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import appIcon from '../src-tauri/icons/icon.png';
+  import packageInfo from '../package.json';
   import './themes.js';
 
   onMount(() => {
@@ -16,6 +17,7 @@
       <img id="studio-app-icon" src={appIcon} alt="" data-tauri-drag-region />
       <strong data-tauri-drag-region>Effigy</strong>
       <span data-tauri-drag-region>Video Compressor</span>
+      <span class="app-version" data-tauri-drag-region>v{packageInfo.version}</span>
     </div>
     <span class="window-title" data-tauri-drag-region>Effigy Video Compressor</span>
     <div class="window-controls">
@@ -38,12 +40,22 @@
       <span class="brand-name" data-tauri-drag-region>Effigy</span>
       <span class="brand-sep" data-tauri-drag-region>·</span>
       <span class="brand-sub" data-tauri-drag-region>Video Compressor</span>
+      <span class="app-version" data-tauri-drag-region>v{packageInfo.version}</span>
     </div>
     <div class="titlebar-drag-region" data-tauri-drag-region></div>
     <div class="header-end">
-      <div class="ffmpeg-status">
+      <div class="ffmpeg-status-wrap">
+        <button class="ffmpeg-status" id="ffmpeg-status-btn" type="button" aria-expanded="false" title="FFmpeg status">
         <span class="status-dot" id="ffmpeg-dot"></span>
         <span class="status-label" id="ffmpeg-label">checking…</span>
+          <span class="ffmpeg-alert" id="ffmpeg-alert" hidden>!</span>
+        </button>
+        <div class="ffmpeg-menu" id="ffmpeg-menu" hidden>
+          <strong id="ffmpeg-menu-title">FFmpeg status</strong>
+          <p id="ffmpeg-menu-detail">Checking the active installation...</p>
+          <p class="ffmpeg-path" id="ffmpeg-menu-path"></p>
+          <button class="btn-primary" id="update-ffmpeg-btn" type="button">Update FFmpeg</button>
+        </div>
       </div>
       <button class="icon-btn" id="settings-btn" title="Settings">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
@@ -257,6 +269,10 @@
         <span id="output-folder-path">Same as source</span>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h7l2 2h9v10H3V7Z"/></svg>
       </button>
+      <label class="output-persist" title="Keep this output folder after restarting Effigy">
+        <input id="persist-output-folder" type="checkbox" />
+        <span>Remember</span>
+      </label>
       <button class="ghost-btn" id="open-output-folder-btn">Open Folder</button>
     </div>
     <span id="summary"></span>
@@ -297,8 +313,8 @@
         <button class="swatch"        data-theme="blue"   title="Blue"   style="--sw:#3b82f6"></button>
         <button class="swatch"        data-theme="green"  title="Green"  style="--sw:#34d399"></button>
         <button class="swatch"        data-theme="purple" title="Purple" style="--sw:#a78bfa"></button>
-        <button class="swatch active" data-theme="cyan"   title="Cyan"   style="--sw:#22d3ee"></button>
-        <button class="swatch"        data-theme="rose"   title="Rose"   style="--sw:#fb7185"></button>
+        <button class="swatch"        data-theme="cyan"   title="Cyan"   style="--sw:#22d3ee"></button>
+        <button class="swatch active" data-theme="rose"   title="Rose"   style="--sw:#fb7185"></button>
         <button class="swatch custom-swatch" data-theme="custom" title="Edit custom color" style="--sw:#22d3ee" aria-label="Edit custom accent color">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16.5V20h3.5L18.2 9.3l-3.5-3.5L4 16.5Zm16.7-9.7a.95.95 0 0 0 0-1.4l-2.1-2.1a.95.95 0 0 0-1.4 0l-1.7 1.7L19 8.5l1.7-1.7Z"/></svg>
         </button>
@@ -363,8 +379,8 @@
 <div id="ffmpeg-warning">
   <div class="warn-card">
     <div class="warn-icon">⚠</div>
-    <h2 class="warn-title">FFmpeg not found</h2>
-    <p class="warn-body">
+    <h2 class="warn-title" id="ffmpeg-warning-title">FFmpeg not found</h2>
+    <p class="warn-body" id="ffmpeg-warning-body">
       FFmpeg is required but wasn't detected in your system PATH or app folder.
     </p>
     <div id="install-idle">
@@ -380,6 +396,10 @@
     <div id="install-progress" style="display:none">
       <div class="install-step" id="install-status">Preparing…</div>
       <div class="install-bar"><div class="install-bar-fill" id="install-bar-fill"></div></div>
+      <div class="warn-actions install-recovery-actions">
+        <button class="btn-primary" id="retry-install-btn" type="button" hidden>Retry</button>
+        <button class="btn-ghost" id="close-install-btn" type="button">Close</button>
+      </div>
     </div>
   </div>
 </div>

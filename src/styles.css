@@ -25,12 +25,12 @@
   --success: #34d399;
   --error:   #f87171;
 
-  /* Accent — cyan first-launch default, overridden by the theme module */
-  --accent:    #22d3ee;
-  --accent-2:  #1898ab;
-  --accent-rgb: 34, 211, 238;
-  --accent-bg: rgba(34,211,238,.14);
-  --accent-bd: rgba(34,211,238,.38);
+  /* Accent — rose first-launch default, overridden by the theme module */
+  --accent:    #fb7185;
+  --accent-2:  #b55160;
+  --accent-rgb: 251, 113, 133;
+  --accent-bg: rgba(251,113,133,.14);
+  --accent-bd: rgba(251,113,133,.38);
 
   /* Type */
   --sans: 'Inter', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
@@ -134,6 +134,33 @@ header button, header .ffmpeg-status,
 }
 .brand-sep { color: var(--text-3); font-size: 0.875rem; }
 .brand-sub { font-size: 0.75rem; color: var(--text-3); letter-spacing: 0.01em; }
+.app-version { font-size: 0.6875rem; color: var(--text-3); font-weight: 500; letter-spacing: 0.01em; }
+.ffmpeg-status-wrap { position: relative; -webkit-app-region: no-drag; }
+.ffmpeg-status {
+  display: flex; align-items: center; gap: 0.4rem;
+  border: 0; background: transparent; color: inherit; font: inherit;
+  padding: 0.35rem 0.45rem; margin: -0.35rem -0.45rem;
+  border-radius: var(--r-sm); cursor: pointer;
+}
+.ffmpeg-status:hover, .ffmpeg-status[aria-expanded="true"] { background: var(--surface-2); }
+.ffmpeg-alert {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: rgba(248,113,113,.16); color: var(--error);
+  font-size: 0.6875rem; font-weight: 800;
+}
+.ffmpeg-menu {
+  position: absolute; z-index: 80; right: 0; top: calc(100% + 0.75rem);
+  width: min(340px, 80vw); padding: var(--s4);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-lg); box-shadow: 0 18px 48px rgba(0,0,0,.45);
+  display: flex; flex-direction: column; gap: var(--s2);
+}
+.ffmpeg-menu[hidden] { display: none; }
+.ffmpeg-menu strong { font-size: 0.875rem; color: var(--text); }
+.ffmpeg-menu p { font-size: 0.75rem; line-height: 1.45; color: var(--text-2); }
+.ffmpeg-menu .ffmpeg-path { color: var(--text-3); font-family: var(--mono); overflow-wrap: anywhere; }
+.ffmpeg-menu .btn-primary { align-self: flex-start; margin-top: var(--s1); }
 
 .header-end { display: flex; align-items: center; gap: var(--s3); }
 
@@ -174,7 +201,7 @@ header button, header .ffmpeg-status,
 /* ── Custom window controls (min / max / close) ────────────── */
 .window-control-bar {
   display: flex;
-  position: relative;
+  position: relative; z-index: 120;
   align-items: center;
   justify-content: flex-end;
   height: 32px;
@@ -615,7 +642,7 @@ footer {
 /* ── Settings panel ──────────────────────────────────────────── */
 #settings-backdrop {
   display: none;
-  position: fixed; inset: 0;
+  position: fixed; inset: 32px 0 0;
   background: rgba(0,0,0,.5);
   z-index: 40;
   backdrop-filter: blur(2px);
@@ -624,7 +651,7 @@ footer {
 
 #settings-panel {
   position: absolute;
-  top: 0; right: -320px;
+  top: 32px; right: -320px;
   width: 308px; bottom: 0;
   background: var(--surface);
   border-left: 1px solid var(--border);
@@ -736,7 +763,7 @@ footer {
 /* ── FFmpeg warning overlay ──────────────────────────────────── */
 #ffmpeg-warning, #close-warning {
   display: none;
-  position: fixed; inset: 0;
+  position: fixed; inset: 32px 0 0;
   background: rgba(8,8,14,.88);
   z-index: 100;
   align-items: center; justify-content: center;
@@ -795,6 +822,8 @@ footer {
   animation: bar-slide 1.4s ease infinite;
 }
 .install-bar-fill.done { animation: none; width: 100%; transition: width .4s ease; }
+.install-bar-fill.failed { animation: none; width: 100%; background: var(--error); }
+.install-recovery-actions { margin-top: var(--s3); }
 @keyframes bar-slide {
   0%   { transform: translateX(-100%) scaleX(.3); }
   50%  { transform: translateX(30%)   scaleX(.8); }
@@ -1135,6 +1164,24 @@ html.light[data-ui-theme="studio"] #theme-selector .theme-card.active .theme-cop
   color: var(--text-2); font: .72rem var(--sans); cursor: pointer;
 }
 [data-ui-theme="studio"] #output-folder-btn:hover { background: var(--surface-3); color: var(--text); }
+[data-ui-theme="studio"] .output-persist {
+  display: inline-flex; align-items: center; gap: 6px; height: 38px;
+  color: var(--text-3); font-size: .7rem; white-space: nowrap; cursor: pointer;
+}
+[data-ui-theme="studio"] .output-persist:hover { color: var(--text); }
+[data-ui-theme="studio"] .output-persist input {
+  appearance: none; width: 16px; height: 16px; margin: 0;
+  border: 1px solid var(--border-2); border-radius: 4px;
+  background: var(--surface-2); display: grid; place-items: center; cursor: pointer;
+}
+[data-ui-theme="studio"] .output-persist input::after {
+  content: ''; width: 8px; height: 4px; border: solid var(--bg);
+  border-width: 0 0 2px 2px; transform: rotate(-45deg) scale(0);
+  transition: transform var(--t);
+}
+[data-ui-theme="studio"] .output-persist input:checked { background: var(--accent); border-color: var(--accent); }
+[data-ui-theme="studio"] .output-persist input:checked::after { transform: rotate(-45deg) scale(1); }
+[data-ui-theme="studio"] .output-persist input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 [data-ui-theme="studio"] #output-folder-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; text-align: left; }
 [data-ui-theme="studio"] #output-folder-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; }
 [data-ui-theme="studio"] #open-output-folder-btn { height: 38px; padding: 0 12px; background: var(--surface-2); }

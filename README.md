@@ -27,6 +27,7 @@ Effigy combines a Svelte interface with a Rust/Tauri backend and FFmpeg. Videos 
 4. If FFmpeg is unavailable, use the in-app installer to download the checksum-verified Full build.
 
 The release is portable. Keep `finish.wav` beside the executable if you want the completion sound.
+The included `finish.wav` is an original synthesized notification tone and contains no third-party audio sample.
 
 ## Features
 

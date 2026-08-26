@@ -60,7 +60,7 @@
   }
 
   function applyAccent(hex) {
-    const normalized = normalizeHex(hex) || ACCENTS.cyan;
+    const normalized = normalizeHex(hex) || ACCENTS.rose;
     const { r, g, b } = hexToRgb(normalized);
     const style = document.documentElement.style;
     style.setProperty('--accent', normalized);

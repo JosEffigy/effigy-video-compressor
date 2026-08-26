@@ -1295,8 +1295,81 @@ pub struct FfmpegCheck {
     pub ffprobe_ok: bool,
     pub ffmpeg_version: String,
     pub source: String, // "local" | "path" | "missing"
+    pub path: String,
+    pub build_variant: String,
+    pub full_build: bool,
+    pub latest_version: String,
+    pub svt_version: String,
+    pub update_available: bool,
 }
 
+async fn latest_gyan_version(git_build: bool) -> Option<String> {
+    let url = if git_build {
+        "https://www.gyan.dev/ffmpeg/builds/ffmpeg-git-full.7z.ver"
+    } else {
+        "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full.7z.ver"
+    };
+    let script = format!(
+        "$ProgressPreference='SilentlyContinue'; (Invoke-WebRequest -UseBasicParsing -Uri '{}').Content.Trim()",
+        url
+    );
+    let output = tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        hidden_cmd("powershell")
+            .args(["-NoProfile", "-Command", &script])
+            .output(),
+    )
+    .await
+    .ok()?
+    .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    (!version.is_empty()).then_some(version)
+}
+
+fn detect_svt_version(ffmpeg: &str) -> String {
+    let output = hidden_std_cmd(ffmpeg)
+        .args([
+            "-hide_banner",
+            "-loglevel",
+            "info",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=black:s=64x64:r=1:d=0.1",
+            "-frames:v",
+            "1",
+            "-an",
+            "-c:v",
+            "libsvtav1",
+            "-f",
+            "null",
+            "NUL",
+        ])
+        .output();
+    let Ok(output) = output else {
+        return String::new();
+    };
+    let log = String::from_utf8_lossy(&output.stderr);
+    let marker = "SVT-AV1 Encoder Lib v";
+    log.lines()
+        .find_map(|line| {
+            line.find(marker)
+                .map(|index| line[index + marker.len()..].trim().to_string())
+        })
+        .unwrap_or_default()
+}
+
+fn svt_major(version: &str) -> Option<u32> {
+    version
+        .trim_start_matches('v')
+        .split('.')
+        .next()?
+        .parse()
+        .ok()
+}
 // ── Commands ──────────────────────────────────────────────────────────────────
 
 #[tauri::command]
@@ -1328,12 +1401,58 @@ async fn check_ffmpeg(state: tauri::State<'_, AppState>) -> Result<FfmpegCheck, 
     } else {
         String::new()
     };
+    let version_output = ffmpeg_info
+        .as_ref()
+        .and_then(|(path, _)| hidden_std_cmd(path).arg("-version").output().ok())
+        .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
+        .unwrap_or_default();
+    let lower_output = version_output.to_ascii_lowercase();
+    let build_variant = if lower_output.contains("full_build") {
+        "full"
+    } else if lower_output.contains("essentials_build") {
+        "essentials"
+    } else {
+        "custom"
+    }
+    .to_string();
+    let full_build = build_variant == "full";
+    let installed_id = version
+        .strip_prefix("ffmpeg version ")
+        .unwrap_or(&version)
+        .split_whitespace()
+        .next()
+        .unwrap_or_default();
+    let is_git = installed_id.contains("-git-");
+    let latest_version = if ffmpeg_info.is_some() {
+        latest_gyan_version(is_git).await.unwrap_or_default()
+    } else {
+        String::new()
+    };
+
+    let path = ffmpeg_info
+        .as_ref()
+        .map(|(path, _)| path.clone())
+        .unwrap_or_default();
+    let svt_version = if path.is_empty() {
+        String::new()
+    } else {
+        detect_svt_version(&path)
+    };
+    let old_svt = svt_major(&svt_version).is_some_and(|major| major < 4);
+    let online_update = !latest_version.is_empty() && !installed_id.starts_with(&latest_version);
+    let update_available = online_update || old_svt;
 
     Ok(FfmpegCheck {
         ffmpeg_ok: ffmpeg_info.is_some(),
         ffprobe_ok: ffprobe_info.is_some(),
         ffmpeg_version: version,
         source,
+        path,
+        build_variant,
+        full_build,
+        latest_version,
+        svt_version,
+        update_available,
     })
 }
 
@@ -1482,8 +1601,8 @@ async fn detect_hardware_encoders(
     ];
     let mut supported = Vec::new();
     for (codec, codec_name, label, family) in candidates {
-        let pixel_format = if family == "software" {
-            "yuv420p"
+        let pixel_format = if codec == "libsvtav1" {
+            "yuv420p10le"
         } else {
             "nv12"
         };
@@ -1521,6 +1640,8 @@ async fn detect_hardware_encoders(
                 "1000k",
                 "-rc",
                 "vbr",
+                "-multipass",
+                "fullres",
                 "-spatial-aq",
                 "1",
                 "-temporal-aq",
@@ -2108,6 +2229,13 @@ async fn compress_files(
             "-hide_banner".into(),
             "-i".into(),
             input.clone(),
+            // Keep stream selection identical across both software passes.
+            // Timestamp-discontinuous captures can otherwise produce a
+            // shorter x264 MB-tree stats file when pass 1 disables audio.
+            "-map".into(),
+            "0:v:0".into(),
+            "-map".into(),
+            "0:a:0?".into(),
             "-map_metadata".into(),
             "0".into(),
             "-map_chapters".into(),
@@ -2199,14 +2327,11 @@ async fn compress_files(
             } else {
                 match family {
                     "nvenc" => {
-                        ff_args.extend([
-                            "-rc".into(),
-                            "vbr".into(),
-                            "-multipass".into(),
-                            "fullres".into(),
-                        ]);
+                        ff_args.extend(["-rc".into(), "vbr".into()]);
                         if options.gpu_gameplay_mode == "nvenc_aq" {
                             ff_args.extend([
+                                "-multipass".into(),
+                                "fullres".into(),
                                 "-spatial-aq".into(),
                                 "1".into(),
                                 "-temporal-aq".into(),
@@ -2310,13 +2435,8 @@ async fn compress_files(
                 } else {
                     2
                 };
-            let qp_compress = if options.allocation_mode == "probe" {
-                2
-            } else {
-                1
-            };
             let mut params = format!(
-                "tune=0:enable-variance-boost=1:variance-boost-strength={variance_strength}:aq-mode=2:qp-scale-compress-strength={qp_compress}"
+                "tune=0:enable-variance-boost=1:variance-boost-strength={variance_strength}:aq-mode=2"
             );
             if options.algorithm == "fixed" {
                 params.insert_str(0, "rc=1:");
@@ -2371,10 +2491,14 @@ async fn compress_files(
             let mut first_args = ff_args.clone();
             add_two_pass_args(&mut first_args, &options.codec, 1, prefix);
             first_args.extend([
-                "-an".into(),
+                // Demux the same audio stream as pass 2 without encoding it.
+                "-c:a".into(),
+                "copy".into(),
                 "-progress".into(),
                 "pipe:1".into(),
                 "-nostats".into(),
+                "-fps_mode".into(),
+                "cfr".into(),
                 "-y".into(),
                 "-f".into(),
                 "null".into(),
@@ -2825,7 +2949,7 @@ fn ensure_settings_file() -> Result<(), String> {
         "resolution_name": "auto", "fps": 0, "fps_name": "auto",
         "target_size": 8, "size_name": "8mb", "allocation_mode": "lightweight", "preset": "slower",
         "svt_preset": 8,
-        "uiTheme": "studio", "accent": "cyan", "customAccent": "#22D3EE",
+        "uiTheme": "studio", "accent": "rose", "customAccent": "#22D3EE",
         "mode": "dark", "openFolder": false, "rememberSettings": true,
         "startOnAdd": false, "minimizeToTray": false
     });

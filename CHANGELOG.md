@@ -6,6 +6,18 @@ This project follows the structure of [Keep a Changelog](https://keepachangelog.
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-08-26
+
+### Added
+
+- Optional persistent output folder checkbox beside the output-folder picker
+- Embedded SVT-AV1 version health checks with retryable FFmpeg Full updates
+
+### Fixed
+
+- Synchronized audio mapping and CFR timing across x264 two-pass encodes to prevent incomplete MB-tree statistics
+- Kept settings, warning backdrops, and panels below the window-control strip
+
 ## [2.0.0] - 2026-08-20
 
 ### Added
