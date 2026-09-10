@@ -19,7 +19,7 @@
       <span data-tauri-drag-region>Video Compressor</span>
       <span class="app-version" data-tauri-drag-region>v{packageInfo.version}</span>
     </div>
-    <span class="window-title" data-tauri-drag-region>Effigy Video Compressor</span>
+    <span class="window-title" data-tauri-drag-region>Effigy Video Compressor v{packageInfo.version}</span>
     <div class="window-controls">
       <button class="wc-btn" id="wc-minimize" title="Minimize">
         <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1.5" fill="currentColor"/></svg>
@@ -119,8 +119,8 @@
         </div>
         <div id="svt-preset-options" hidden>
           <div class="preset-slider-row">
-            <input id="svt-preset-slider" type="range" min="0" max="13" value="8" />
-            <span id="svt-preset-value">8</span>
+            <input id="svt-preset-slider" type="range" min="0" max="13" value="6" />
+            <span id="svt-preset-value">6</span>
           </div>
           <div class="preset-scale"><span>Best quality</span><span>Fastest</span></div>
           <p class="quality-hint">Lower presets compress more slowly and usually preserve more quality.</p>
@@ -195,6 +195,7 @@
               <span class="unit-label">MB</span>
             </div>
           </div>
+          <div id="allocation-controls">
           <div class="subsection-label">Gameplay Allocation</div>
           <div class="option-group" id="allocation-options">
             <button class="option-btn active" data-group="allocation" data-value="lightweight">
@@ -207,6 +208,7 @@
           <p class="quality-hint" id="allocation-hint">
             Analyzes motion across the video and gives difficult gameplay scenes more of the fixed bitrate budget.
           </p>
+          </div>
         </div>
         <div id="dynamic-quality-options">
           <div class="subsection-label">CRF Quality</div>

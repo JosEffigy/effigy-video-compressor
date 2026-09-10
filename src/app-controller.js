@@ -29,7 +29,7 @@ const state = {
   res_mode:'auto', res_w:null, res_h:null, resolution_name:'auto',
   fps:0, fps_name:'auto',
   target_size:8, size_name:'8mb', allocation_mode:'lightweight',
-  preset:'slower', svt_preset:8,
+  preset:'slower', svt_preset:6,
 };
 
 const prefs = {
@@ -318,7 +318,8 @@ function syncAlgorithmUi() {
   const dynamic = state.algorithm === 'dynamic';
   $('fixed-size-options').hidden = dynamic;
   $('dynamic-quality-options').hidden = !dynamic;
-  const nativeScenes = ['libx264','libx265','libsvtav1'].includes(state.codec);
+  $('allocation-controls').hidden = state.codec === 'libsvtav1';
+  const nativeScenes = ['libx264','libx265'].includes(state.codec);
   const probeButton = document.querySelector('[data-group="allocation"][data-value="probe"]');
   probeButton.disabled = !nativeScenes;
   probeButton.title = nativeScenes
@@ -629,7 +630,7 @@ $('compress-btn').addEventListener('click', async () => {
     resolution_name:state.resolution_name,
     fps:state.fps, fps_name:state.fps_name,
     target_size:state.target_size, size_name:state.size_name,
-    allocation_mode:state.allocation_mode,
+    allocation_mode:state.codec === 'libsvtav1' ? 'lightweight' : state.allocation_mode,
     preset:state.preset, svt_preset:state.svt_preset,
     output_folder:prefs.outputFolder || null,
   };

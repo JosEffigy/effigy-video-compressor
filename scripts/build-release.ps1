@@ -3,8 +3,17 @@ $ErrorActionPreference = 'Stop'
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $releaseRoot = Join-Path $projectRoot 'release'
-$packageRoot = Join-Path $releaseRoot 'effigy-video-compressor'
-$zipPath = Join-Path $releaseRoot 'effigy-compressor.zip'
+$releaseVersion = (Get-Content -LiteralPath (Join-Path $projectRoot 'package.json') -Raw | ConvertFrom-Json).version
+if ($releaseVersion -notmatch '^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$') {
+    throw "Invalid release version: $releaseVersion"
+}
+$cargoManifest = Get-Content -LiteralPath (Join-Path $projectRoot 'src-tauri\Cargo.toml') -Raw
+if ($cargoManifest -notmatch ('(?m)^version\s*=\s*"' + [regex]::Escape($releaseVersion) + '"\s*$')) {
+    throw 'Cargo.toml and package.json versions must match before building a release.'
+}
+$artifactName = "effigy-video-compressor-v$releaseVersion"
+$packageRoot = Join-Path $releaseRoot $artifactName
+$zipPath = Join-Path $releaseRoot "$artifactName.zip"
 $binaryPath = Join-Path $projectRoot 'build\cargo-target\release\effigy-video-compressor.exe'
 $finishSoundPath = Join-Path $projectRoot 'finish.wav'
 
@@ -41,7 +50,7 @@ try {
     Remove-ReleaseArtifact $zipPath
     New-Item -ItemType Directory -Force -Path $packageRoot | Out-Null
 
-    Copy-Item -LiteralPath $binaryPath -Destination (Join-Path $packageRoot 'effigy-video-compressor.exe') -Force
+    Copy-Item -LiteralPath $binaryPath -Destination (Join-Path $packageRoot "$artifactName.exe") -Force
     if (Test-Path -LiteralPath $finishSoundPath -PathType Leaf) {
         Copy-Item -LiteralPath $finishSoundPath -Destination (Join-Path $packageRoot 'finish.wav') -Force
     }

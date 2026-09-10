@@ -21,9 +21,9 @@ Effigy combines a Svelte interface with a Rust/Tauri backend and FFmpeg. Videos 
 
 ## Download and run
 
-1. Download `effigy-compressor.zip` from [Releases](https://github.com/JosEffigy/effigy-video-compressor/releases).
+1. Download `effigy-video-compressor-v2.1.1.zip` from [Releases](https://github.com/JosEffigy/effigy-video-compressor/releases).
 2. Extract the ZIP to a writable folder.
-3. Run `effigy-video-compressor.exe`.
+3. Run the versioned executable, such as `effigy-video-compressor-v2.1.1.exe`.
 4. If FFmpeg is unavailable, use the in-app installer to download the checksum-verified Full build.
 
 The release is portable. Keep `finish.wav` beside the executable if you want the completion sound.
@@ -60,10 +60,10 @@ The included `finish.wav` is an original synthesized notification tone and conta
 
 ## Gameplay allocation
 
-Gameplay allocation appears only in Fixed-MB mode. `Lightweight` is the default and scans motion across the full video. `Probe-based` additionally creates a temporary low-resolution constant-quality encode and measures the bits each scene requires at that quality.
+Gameplay allocation choices appear only in Fixed-MB mode for encoders other than SVT-AV1. `Lightweight` is the default and scans motion across the full video. `Probe-based` additionally creates a temporary low-resolution constant-quality encode and measures the bits each scene requires at that quality. SVT-AV1 always uses Lightweight motion analysis for Auto resolution/FPS and skips the extra quality probe.
 
 - x264 and x265 receive normalized native bitrate zones while retaining two-pass ABR/VBV and the global size budget.
-- SVT-AV1 retains two-pass ABR and uses the analysis to calibrate its scene-aware AQ and variance-boost strength. Per-picture QP maps are intentionally not used because they can override VBR strongly enough to violate the hard size target.
+- SVT-AV1 retains native two-pass ABR with preset 6 by default, VQ tuning, AQ2, variance-boost strength 2, and `ac-bias=1.0`. It encodes the video continuously without separate scene budgets or per-picture QP maps.
 - NVENC, AMF, and QSV do not expose arbitrary time-range bitrate zones through FFmpeg. Effigy tests and enables their closest supported hardware path: lookahead/AQ for NVENC, pre-analysis/temporal AQ/high-motion boost for AMF, or extended bitrate control/lookahead for QSV.
 - Every path still receives final hard-size verification and automatic bitrate correction.
 
@@ -104,10 +104,10 @@ This rebuilds the app, writes Cargo artifacts only to `build/cargo-target`, then
 
 ```text
 release/
-├─ effigy-video-compressor/
-│  ├─ effigy-video-compressor.exe
+├─ effigy-video-compressor-v2.1.1/
+│  ├─ effigy-video-compressor-v2.1.1.exe
 │  └─ finish.wav                 (when present in the project root)
-└─ effigy-compressor.zip         (contains the folder above)
+└─ effigy-video-compressor-v2.1.1.zip         (contains the folder above)
 ```
 
 ## FFmpeg lookup order

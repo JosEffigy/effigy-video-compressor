@@ -6,6 +6,14 @@ This project follows the structure of [Keep a Changelog](https://keepachangelog.
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-09-10
+
+### Changed
+
+- Default SVT-AV1 to preset 6 with AC bias 1.0 and Lightweight analysis only; hide analysis choices for this encoder.
+- Allow 200% VBV peaks for supported fixed-size encoders, including size-correction retries.
+- Add the release version to portable filenames and keep title-bar versions synchronized with package metadata.
+
 ## [2.1.0] - 2026-08-26
 
 ### Added

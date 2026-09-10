@@ -1055,7 +1055,7 @@ mod auto_profile_tests {
             size_name: "8mb".into(),
             allocation_mode: "lightweight".into(),
             preset: "medium".into(),
-            svt_preset: 8,
+            svt_preset: 6,
             output_folder: None,
         }
     }
@@ -1635,7 +1635,7 @@ async fn detect_hardware_encoders(
                 "-b:v",
                 "500k",
                 "-maxrate",
-                "625k",
+                "1000k",
                 "-bufsize",
                 "1000k",
                 "-rc",
@@ -1655,7 +1655,7 @@ async fn detect_hardware_encoders(
                 "-b:v",
                 "500k",
                 "-maxrate",
-                "625k",
+                "1000k",
                 "-bufsize",
                 "1000k",
                 "-rc",
@@ -1671,7 +1671,7 @@ async fn detect_hardware_encoders(
                 "-b:v",
                 "500k",
                 "-maxrate",
-                "625k",
+                "1000k",
                 "-bufsize",
                 "1000k",
                 "-extbrc",
@@ -1928,8 +1928,12 @@ async fn compress_files(
     state: tauri::State<'_, AppState>,
     app: AppHandle,
     files: Vec<String>,
-    options: CompressOptions,
+    mut options: CompressOptions,
 ) -> Result<Vec<FileResult>, String> {
+    // SVT uses native two-pass allocation; external probe zones are not applied.
+    if options.codec == "libsvtav1" {
+        options.allocation_mode = "lightweight".into();
+    }
     let ffmpeg = state
         .ffmpeg
         .lock()
@@ -2117,7 +2121,7 @@ async fn compress_files(
             ));
         }
         let supports_custom_scene_allocation =
-            matches!(options.codec.as_str(), "libx264" | "libx265" | "libsvtav1");
+            matches!(options.codec.as_str(), "libx264" | "libx265");
         let probe_packets = if options.algorithm == "fixed"
             && options.allocation_mode == "probe"
             && supports_custom_scene_allocation
@@ -2149,7 +2153,7 @@ async fn compress_files(
             None
         };
         let scene_allocations =
-            if options.algorithm == "fixed" {
+            if options.algorithm == "fixed" && supports_custom_scene_allocation {
                 let allocations =
                     gameplay_allocations(duration, &motion_samples, probe_packets.as_deref());
                 let minimum = allocations
@@ -2201,7 +2205,7 @@ async fn compress_files(
             .to_string();
         // ABR controls the global size while VBV permits bounded scene peaks.
         // The final hard-limit verification below remains authoritative.
-        let peak_bitrate = (bitrate * 5) / 4;
+        let peak_bitrate = bitrate * 2;
         let bufsize = bitrate * 2;
 
         let profile = if options.codec == "libx264" || options.codec.starts_with("h264_") {
@@ -2415,37 +2419,15 @@ async fn compress_files(
         }
 
         if family == "svt" {
-            let allocation_spread = scene_allocations
-                .as_deref()
-                .map(|allocations| {
-                    let minimum = allocations
-                        .iter()
-                        .map(|allocation| allocation.weight)
-                        .fold(1.0_f64, f64::min);
-                    let maximum = allocations
-                        .iter()
-                        .map(|allocation| allocation.weight)
-                        .fold(1.0_f64, f64::max);
-                    maximum - minimum
-                })
-                .unwrap_or(0.0);
-            let variance_strength =
-                if options.allocation_mode == "probe" && allocation_spread >= 0.20 {
-                    3
-                } else {
-                    2
-                };
-            let mut params = format!(
-                "tune=0:enable-variance-boost=1:variance-boost-strength={variance_strength}:aq-mode=2"
+            let mut params = String::from(
+                "tune=0:enable-variance-boost=1:variance-boost-strength=2:aq-mode=2:ac-bias=1.0"
             );
             if options.algorithm == "fixed" {
                 params.insert_str(0, "rc=1:");
-                emit_l!(format!(
-                    "[INFO] SVT-AV1 gameplay allocation: scene-aware VBR + AQ2 + variance boost {variance_strength}"
-                ));
+                emit_l!("[INFO] SVT-AV1 allocation: native two-pass VBR + AQ2 + variance boost 2");
             }
             ff_args.extend(["-svtav1-params".into(), params]);
-            emit_l!("[INFO] SVT-AV1: 10-bit VQ tune with motion-calibrated quality redistribution");
+            emit_l!("[INFO] SVT-AV1: 10-bit VQ tune with AC bias 1.0");
         }
 
         // Software encoder-specific quality tuning. Keyframe placement is left
@@ -2686,7 +2668,7 @@ async fn compress_files(
                 );
                 bitrate = corrected_bitrate;
                 let _ = set_ffmpeg_arg(&mut ff_args, "-b:v", format!("{bitrate}k"));
-                let _ = set_ffmpeg_arg(&mut ff_args, "-maxrate", format!("{}k", (bitrate * 5) / 4));
+                let _ = set_ffmpeg_arg(&mut ff_args, "-maxrate", format!("{}k", bitrate * 2));
                 let _ = set_ffmpeg_arg(&mut ff_args, "-bufsize", format!("{}k", bitrate * 2));
                 let _ = std::fs::remove_file(&out_path);
                 let retry_stage = format!("Size correction {retry}/2 â€¢ {bitrate} kbps â€¢");
@@ -2948,7 +2930,7 @@ fn ensure_settings_file() -> Result<(), String> {
         "res_mode": "auto", "res_w": null, "res_h": null,
         "resolution_name": "auto", "fps": 0, "fps_name": "auto",
         "target_size": 8, "size_name": "8mb", "allocation_mode": "lightweight", "preset": "slower",
-        "svt_preset": 8,
+        "svt_preset": 6,
         "uiTheme": "studio", "accent": "rose", "customAccent": "#22D3EE",
         "mode": "dark", "openFolder": false, "rememberSettings": true,
         "startOnAdd": false, "minimizeToTray": false
@@ -3007,6 +2989,9 @@ pub fn run() {
             process_job: ProcessJob::new(),
         })
         .setup(|app| {
+            if let Some(window) = app.get_webview_window("main") {
+                window.set_title(&format!("Effigy Video Compressor v{}", app.package_info().version))?;
+            }
             if let Err(error) = ensure_settings_file() {
                 eprintln!("Unable to create effigy-video-compressor.cfg: {error}");
             }
