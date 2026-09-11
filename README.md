@@ -1,150 +1,114 @@
 <div align="center">
-  <img src="src-tauri/icons/icon.png" alt="Effigy Video Compressor icon" width="96" height="96">
+  <img src="src-tauri/icons/icon.png" alt="Effigy Video Compressor" width="96" height="96">
   <h1>Effigy Video Compressor</h1>
-  <p>A fast, focused Windows video compressor with strict file-size targeting and automatic hardware-encoder detection.</p>
+  <p><strong>Smaller clips. Your size limit. All on your PC.</strong></p>
+  <p>A portable Windows video compressor with CPU and GPU encoding, automatic size correction, and two interface styles.</p>
   <p>
-    <a href="https://github.com/JosEffigy/effigy-video-compressor/releases/latest"><strong>Download the latest release</strong></a>
-    ·
-    <a href="CHANGELOG.md">Changelog</a>
-    ·
-    <a href="CONTRIBUTING.md">Contributing</a>
+    <a href="https://github.com/JosEffigy/effigy-video-compressor/releases/latest"><strong>Download for Windows</strong></a>
+    &nbsp;·&nbsp; <a href="CHANGELOG.md">What's new</a>
+    &nbsp;·&nbsp; <a href="https://github.com/JosEffigy/effigy-video-compressor/issues">Report an issue</a>
   </p>
 </div>
 
-Effigy combines a Svelte interface with a Rust/Tauri backend and FFmpeg. Videos stay on your PC, and the app exposes only the hardware encoders that successfully initialize on the current system.
+## Support development ☕
 
-## Screenshots
+If Effigy saves you time, a donation helps support its development. Thank you!
+
+[![Support on Ko-fi](https://img.shields.io/badge/Support_on_Ko--fi-FF5E5B?style=for-the-badge&logo=kofi&logoColor=white)](https://ko-fi.com/joseffigy)
+[![Donate with PayPal](https://img.shields.io/badge/Donate_with_PayPal-003087?style=for-the-badge&logo=paypal&logoColor=white)](https://paypal.me/JosEffigy)
+
+## Pick your workspace
 
 | Modern | Simple |
 | --- | --- |
-| ![Modern theme](docs/screenshots/modern-theme.png) | ![Simple theme](docs/screenshots/simple-theme.png) |
+| ![Modern interface](docs/screenshots/modern-theme.png) | ![Simple interface](docs/screenshots/simple-theme.png) |
 
-## Download and run
+Both styles include dark, light, and system appearance, plus custom accent colors.
 
-1. Download `effigy-video-compressor-v2.1.2.zip` from [Releases](https://github.com/JosEffigy/effigy-video-compressor/releases).
-2. Extract the ZIP to a writable folder.
-3. Run the versioned executable, such as `effigy-video-compressor-v2.1.2.exe`.
-4. If FFmpeg is unavailable, use the in-app installer to download the checksum-verified Full build.
+## Get started
 
-The release is portable. Keep `finish.wav` beside the executable if you want the completion sound.
-The included `finish.wav` is an original synthesized notification tone and contains no third-party audio sample.
+1. Download the versioned ZIP from the [latest release](https://github.com/JosEffigy/effigy-video-compressor/releases/latest).
+2. Extract it to a writable folder and run the included executable, such as `effigy-video-compressor-v2.1.2.exe`.
+3. If prompted, install FFmpeg through the app.
+4. Add your videos, choose a target size or quality level, and compress.
 
-## Features
+**To run:** Windows 10/11, Microsoft Edge WebView2, and FFmpeg/FFprobe. The app can install FFmpeg for you. Rust and Node.js are only needed to build from source.
 
-- CPU encoding with x264, x265, and SVT-AV1
-- Automatic NVIDIA NVENC, AMD AMF, and Intel QSV detection
-- GPU names shown next to supported hardware encoders
-- MP4 with AAC audio and WebM with Opus audio
-- Fixed target-size encoding or dynamic CRF/perceptual-quality control
-- Automatic two-pass ABR with VBV constraints for fixed-size x264/x265, plus two-pass ABR for SVT-AV1
-- Resolution, frame-rate, quality, and encoder-preset controls
-- Adaptive AAC/Opus audio bitrate based on the available file-size budget
-- Fixed-mode Auto resolution and FPS selection based on bitrate and sampled motion complexity
-- Fixed-MB gameplay allocation with Lightweight full-video motion analysis or a more precise constant-quality Probe mode
-- Multi-file queue with per-file cancellation and progress
-- Modern and Simple themes, light/dark/system appearance, and custom accent colors
-- Optional start-on-add, minimize-to-tray, open-folder-on-finish, and encoder-setting persistence
-- Single-instance behavior and automatic cleanup of FFmpeg child processes
-- Selectable FFmpeg log with copy and clear actions
+Videos are processed locally. Keep `finish.wav` beside the executable for the optional completion sound.
 
-## Supported rate control
+## What you can do
 
-| Mode | Encoder behavior |
-| --- | --- |
-| Fixed size | Two-pass ABR with VBV constraints for x264/x265; SVT-AV1 uses two-pass ABR because it rejects VBV in ABR mode; hardware encoders use their multipass/constrained-VBR equivalent; every encoder gets hard-limit verification and automatic correction |
-| Dynamic | CRF for software encoders and the closest vendor perceptual-quality mode for hardware encoders |
-| NVENC | Full-resolution multipass constrained VBR for fixed size; CQ-VBR for dynamic quality |
-| AMF | Peak-constrained VBR for fixed size; QVBR for dynamic quality when the driver initializes it, with an automatically detected hardware-quality fallback otherwise |
-| QSV | Bitrate-constrained VBR for fixed size; ICQ/global-quality for dynamic quality |
-| SVT-AV1 | Two-pass ABR for fixed-size targets, followed by hard-size verification and correction |
+- **Fit a file-size limit:** two-pass software encoding, adaptive audio budgets, and final size verification with automatic correction.
+- **Choose quality instead:** CRF for software encoders or the supported hardware quality mode.
+- **Use your CPU or GPU:** x264, x265, SVT-AV1, NVIDIA NVENC, AMD AMF, and Intel QSV. Hardware encoders appear only after successfully initializing on your system.
+- **Control resolution and frame rate:** choose manually or let Auto use the bitrate budget and sampled motion.
+- **Queue multiple videos:** per-file progress and cancellation, with an accessible FFmpeg log.
+- **Export MP4 or WebM:** MP4 with AAC audio; WebM with Opus for AV1 encoders.
+- **Make it yours:** remembered settings, optional persistent output folder, start-on-add, and minimize-to-tray.
 
-## Gameplay allocation
+## Encoding details
 
-Gameplay allocation choices appear only in Fixed-MB mode for encoders other than SVT-AV1. `Lightweight` is the default and scans motion across the full video. `Probe-based` additionally creates a temporary low-resolution constant-quality encode and measures the bits each scene requires at that quality. SVT-AV1 always uses Lightweight motion analysis for Auto resolution/FPS and skips the extra quality probe.
+| Encoder | Fixed size | Quality mode |
+| --- | --- | --- |
+| x264 / x265 | Two-pass average bitrate with VBV | CRF |
+| SVT-AV1 | Native two-pass average bitrate | CRF |
+| NVIDIA NVENC | VBR; tested multipass/AQ controls when available | CQ-VBR |
+| AMD AMF | Peak-constrained VBR | QVBR when supported, otherwise a tested fallback |
+| Intel QSV | Bitrate-constrained VBR | Global-quality / ICQ |
 
-- x264 and x265 receive normalized native bitrate zones while retaining two-pass ABR/VBV and the global size budget.
-- SVT-AV1 retains native two-pass ABR with preset 6 by default, VQ tuning, AQ2, variance-boost strength 2, and `ac-bias=1.0`. It encodes the video continuously without separate scene budgets or per-picture QP maps.
-- NVENC, AMF, and QSV do not expose arbitrary time-range bitrate zones through FFmpeg. Effigy tests and enables their closest supported hardware path: lookahead/AQ for NVENC, pre-analysis/temporal AQ/high-motion boost for AMF, or extended bitrate control/lookahead for QSV.
-- Every path still receives final hard-size verification and automatic bitrate correction.
+Supported fixed-size VBV paths allow peaks of **200% of the average bitrate**. SVT-AV1's ABR path does not use VBV. Fixed-size outputs are checked against the target and retried when necessary; an output still over the limit is reported as a failure.
 
-Hardware options are tested at runtime, so an encoder is hidden if FFmpeg or the installed driver cannot initialize it.
+**SVT-AV1 defaults:** preset **6**, 10-bit output, `tune=0`, AQ2, variance-boost strength **2**, and `ac-bias=1.0`. These are practical defaults, not a claim of best quality for every video.
 
-## Requirements
+### Motion and scene analysis
 
-- Windows 10 or Windows 11
-- [Rust](https://rustup.rs/) with the MSVC toolchain
-- [Node.js](https://nodejs.org/) 22 or newer
-- [pnpm](https://pnpm.io/installation)
-- Microsoft Edge WebView2, normally included with current Windows versions
-- FFmpeg and FFprobe on `PATH`, beside the executable, or installed through Effigy
+- **x264 / x265:** Lightweight uses motion analysis; Probe-based adds a low-resolution constant-quality encode. Both can feed normalized bitrate zones into the encoder.
+- **SVT-AV1:** always uses Lightweight motion analysis for Auto resolution/FPS. Analysis choices are hidden, and its native two-pass encoder distributes the video budget. No separate scene encodes or individual scene targets.
+- **Hardware encoders:** use tested lookahead, adaptive quantization, or pre-analysis features where supported, rather than custom time-range zones.
 
-## Development
+## Settings and FFmpeg
+
+Settings live in `effigy-video-compressor.cfg` beside the executable. Appearance preferences are saved automatically; encoder choices are restored when **Remember encoder settings** is enabled. The output folder is remembered only when its persistence option is enabled.
+
+Close the app and remove the configuration file to reset it. First-launch settings are x264, CRF 24, Slower, Auto resolution/FPS, and MP4.
+
+FFmpeg and FFprobe are found in this order:
+
+1. Beside the executable.
+2. `%LOCALAPPDATA%\Programs\FFmpeg\bin`.
+3. System `PATH`.
+
+The in-app installer downloads the checksum-verified Full release build from [gyan.dev](https://www.gyan.dev/ffmpeg/builds/), including SVT-AV1 support.
+
+## Build from source
+
+Install Rust with the MSVC toolchain, Node.js 22+, and pnpm, then run:
 
 ```powershell
 pnpm install
 pnpm tauri dev
 ```
 
-Run the project checks:
+Build and check the project:
 
 ```powershell
 pnpm build
-cd src-tauri
-cargo fmt --check
-cargo clippy --all-targets -- -D warnings
+cargo test --manifest-path src-tauri/Cargo.toml
+cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
 ```
 
-## Release build
-
-```powershell
-pnpm release
-```
-
-This rebuilds the app, writes Cargo artifacts only to `build/cargo-target`, then recreates the distributable layout below. The release folder never receives dependency trees, Cargo output, source icons, or other build artifacts.
+Create a portable release with `pnpm release`. Package and Cargo versions must match; title bars follow the package version. The archive, folder, and executable include the version:
 
 ```text
 release/
 ├─ effigy-video-compressor-v2.1.2/
 │  ├─ effigy-video-compressor-v2.1.2.exe
-│  └─ finish.wav                 (when present in the project root)
-└─ effigy-video-compressor-v2.1.2.zip         (contains the folder above)
+│  └─ finish.wav
+└─ effigy-video-compressor-v2.1.2.zip
 ```
 
-## FFmpeg lookup order
-
-Effigy looks for `ffmpeg.exe` and `ffprobe.exe` in this order:
-
-1. Beside the Effigy executable
-2. The managed per-user installation at `%LOCALAPPDATA%\Programs\FFmpeg\bin`
-3. The system `PATH`
-
-The in-app installer downloads the checksum-verified FFmpeg Full release build from [gyan.dev](https://www.gyan.dev/ffmpeg/builds/). It stores the binaries in `%LOCALAPPDATA%\Programs\FFmpeg\bin` and adds that neutral directory to the user `PATH` when needed. The Full variant includes SVT-AV1 in addition to the encoders provided by Essentials.
-
-## Portable settings
-
-Effigy creates `effigy-video-compressor.cfg` beside the executable. Appearance and behavior preferences are always persisted. Encoder choices are restored only when **Remember encoder settings** is enabled. The output folder is session-only and always resets to **Same as source** when Effigy starts.
-
-To reset the app, close Effigy and remove `effigy-video-compressor.cfg`. It will be recreated with x264, CRF 24, Slower, Auto resolution, Auto FPS, and MP4 as the first-launch encoder defaults. Version 1 settings automatically migrate the previous CQP value to CRF.
-
-## Optional completion sound
-
-Place a file named `finish.wav` beside the executable to play it after a compression batch finishes.
-
-## Project structure
-
-```text
-src/                    Svelte UI, styles, themes, and controller
-src-tauri/src/lib.rs    FFmpeg, hardware detection, process safety, and Tauri commands
-src-tauri/icons/        Canonical PNG and Windows ICO application icons
-src-tauri/tauri.conf.json
-```
-
-The canonical source icon is `src-tauri/icons/icon.png`. Regenerate platform icons with `pnpm tauri icon <square-image.png>` if needed.
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the development and validation workflow.
+The interface lives in `src/`; the Rust/Tauri backend lives in `src-tauri/src/lib.rs`. See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidance.
 
 ## License
 
-No open-source license has been selected yet. All rights are reserved by the project owner.
+No open-source license has been selected. All rights are reserved by the project owner.
