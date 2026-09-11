@@ -21,9 +21,9 @@ Effigy combines a Svelte interface with a Rust/Tauri backend and FFmpeg. Videos 
 
 ## Download and run
 
-1. Download `effigy-video-compressor-v2.1.1.zip` from [Releases](https://github.com/JosEffigy/effigy-video-compressor/releases).
+1. Download `effigy-video-compressor-v2.1.2.zip` from [Releases](https://github.com/JosEffigy/effigy-video-compressor/releases).
 2. Extract the ZIP to a writable folder.
-3. Run the versioned executable, such as `effigy-video-compressor-v2.1.1.exe`.
+3. Run the versioned executable, such as `effigy-video-compressor-v2.1.2.exe`.
 4. If FFmpeg is unavailable, use the in-app installer to download the checksum-verified Full build.
 
 The release is portable. Keep `finish.wav` beside the executable if you want the completion sound.
@@ -104,10 +104,10 @@ This rebuilds the app, writes Cargo artifacts only to `build/cargo-target`, then
 
 ```text
 release/
-├─ effigy-video-compressor-v2.1.1/
-│  ├─ effigy-video-compressor-v2.1.1.exe
+├─ effigy-video-compressor-v2.1.2/
+│  ├─ effigy-video-compressor-v2.1.2.exe
 │  └─ finish.wav                 (when present in the project root)
-└─ effigy-video-compressor-v2.1.1.zip         (contains the folder above)
+└─ effigy-video-compressor-v2.1.2.zip         (contains the folder above)
 ```
 
 ## FFmpeg lookup order

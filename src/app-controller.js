@@ -821,10 +821,16 @@ $('install-ffmpeg-btn').addEventListener('click', runFfmpegInstall);
 $('retry-install-btn').addEventListener('click', runFfmpegInstall);
 // ── Init ──────────────────────────────────────────────────────────────────────
 (async function initializeApp() {
-  await loadPrefs();
-  applyLoadedPrefs();
-  renderQueue();
-  savePrefs();
+  try {
+    await loadPrefs();
+    applyLoadedPrefs();
+    renderQueue();
+    savePrefs();
+  } finally {
+    // Hidden WebViews may throttle animation frames, so do not await rAF here.
+    await new Promise(resolve => setTimeout(resolve, 50));
+    await invoke('show_ready_window');
+  }
 })();
 
 // ── Custom window controls ────────────────────────────────────────────────────

@@ -55,6 +55,7 @@ pub struct AppState {
     pub cancel_all: AtomicBool,
     pub running: AtomicBool,
     pub allow_close: AtomicBool,
+    pub startup_revealed: AtomicBool,
     pub minimize_to_tray: AtomicBool,
     #[cfg(windows)]
     pub process_job: ProcessJob,
@@ -2960,6 +2961,15 @@ fn save_settings(settings: serde_json::Value) -> Result<(), String> {
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
+#[tauri::command]
+fn show_ready_window(app: AppHandle) {
+    if !app.state::<AppState>().startup_revealed.swap(true, Ordering::SeqCst) {
+        if let Some(window) = app.get_webview_window("main") {
+            let _ = window.show();
+        }
+    }
+}
+
 fn restore_main_window(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
@@ -2984,11 +2994,17 @@ pub fn run() {
             cancel_all: AtomicBool::new(false),
             running: AtomicBool::new(false),
             allow_close: AtomicBool::new(false),
+            startup_revealed: AtomicBool::new(false),
             minimize_to_tray: AtomicBool::new(false),
             #[cfg(windows)]
             process_job: ProcessJob::new(),
         })
         .setup(|app| {
+            let startup_app = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                show_ready_window(startup_app);
+            });
             if let Some(window) = app.get_webview_window("main") {
                 window.set_title(&format!("Effigy Video Compressor v{}", app.package_info().version))?;
             }
@@ -3031,6 +3047,7 @@ pub fn run() {
         })
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
+            show_ready_window,
             check_ffmpeg,
             detect_hardware_encoders,
             select_files,

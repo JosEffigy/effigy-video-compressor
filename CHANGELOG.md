@@ -6,6 +6,12 @@ This project follows the structure of [Keep a Changelog](https://keepachangelog.
 
 ## [Unreleased]
 
+## [2.1.2] - 2026-09-11
+
+### Fixed
+
+- Prevent the white startup flash with a dark window background and reveal the window after loading the saved theme, with a timeout fallback.
+
 ## [2.1.1] - 2026-09-10
 
 ### Changed
